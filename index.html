@@ -6,9 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="نظام مراقبة السلامة الهمنية">
+<meta name="apple-mobile-web-app-title" content="حرس السلامة">
 <meta name="theme-color" content="#16324F">
-<title> المهنية نظام إدارة السلامة</title>
+<title>حرس السلامة — نظام إدارة السلامة</title>
 <style>
   :root{
     --navy:#16324F; --navy2:#1B3A5C; --accent:#1D6FB8; --bg:#EEF1F6; --card:#FFFFFF;
@@ -323,10 +323,16 @@ const DEFAULT_CONN =
 const $ = id => document.getElementById(id);
 const dlgAlert = $("dlgAlert"), dlgPass = $("dlgPass");
 
+// تخزين آمن: معاينة github.com والتصفح الخاص يمنعان localStorage — نستخدم بديلاً في الذاكرة
+const store = (() => {
+  try { const t = "__sg_t"; localStorage.setItem(t, "1"); localStorage.removeItem(t); return localStorage; }
+  catch { const mem = {}; return { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: k => { delete mem[k]; } }; }
+})();
+
 // ---------- الحالة ----------
 const state = {
-  conn: localStorage.getItem("sg_conn") || DEFAULT_CONN,
-  session: JSON.parse(localStorage.getItem("sg_session") || "null"),
+  conn: store.getItem("sg_conn") || DEFAULT_CONN,
+  session: JSON.parse(store.getItem("sg_session") || "null"),
   view: "map",
   groups: [], currentGroupId: 0, messages: [], lastMsgId: 0,
   zones: [], roster: [], activeAlert: null, summary: null,
@@ -358,13 +364,15 @@ async function pg(sql, params = []) {
   const { base, connString } = parseConn(state.conn);
   let r;
   try {
+    // مهم: بدون ترويسة Content-Type — المتصفح سيضع text/plain تلقائيًا وهو مسموح في CORS،
+    // أما application/json فقائمة التمهيدي في بروكسي Neon لا تسمح بها ويرفضها المتصفح.
     r = await fetch(base + "/sql", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Neon-Connection-String": connString },
+      headers: { "Neon-Connection-String": connString },
       body: JSON.stringify({ query: sql, params }),
     });
   } catch (e) {
-    throw new Error("لا يمكن الوصول إلى خادم قاعدة البيانات — تحقق من اتصال الإنترنت");
+    throw new Error("تعذر الوصول إلى خادم قاعدة البيانات — تحقق من اتصال الإنترنت، وإن كنت تفتح الملف من صفحة معاينة github.com فاستخدم رابط github.io مباشرة");
   }
   if (r.status === 401 || r.status === 403) throw new Error("بيانات الدخول داخل رابط قاعدة البيانات غير صحيحة — عدّل الرابط");
   if (!r.ok) throw new Error("تعذر الاتصال بقاعدة البيانات (HTTP " + r.status + ")");
@@ -441,7 +449,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&
 // ============================================================
 $("btnDbCfg").addEventListener("click", () => {
   const cur = prompt("رابط قاعدة البيانات (postgresql://...):", state.conn);
-  if (cur && cur.trim()) { state.conn = cur.trim(); localStorage.setItem("sg_conn", state.conn); checkConn(); }
+  if (cur && cur.trim()) { state.conn = cur.trim(); store.setItem("sg_conn", state.conn); checkConn(); }
 });
 async function checkConn() {
   $("dbDot").classList.remove("err"); $("dbState").textContent = "جاهزة";
@@ -470,7 +478,7 @@ async function doLogin() {
       userId: u.id, username: u.username, fullName: u.full_name || "",
       role: u.role || "member", assignedZoneId: u.assigned_zone_id ?? null,
     };
-    localStorage.setItem("sg_session", JSON.stringify(state.session));
+    store.setItem("sg_session", JSON.stringify(state.session));
     enterMain();
   } catch (e) {
     errEl.textContent = e.message || "تعذر الاتصال بقاعدة البيانات — تحقق من الرابط والشبكة";
@@ -509,7 +517,7 @@ function enterMain() {
 
 $("btnLogout").addEventListener("click", () => {
   stopTimers();
-  localStorage.removeItem("sg_session");
+  store.removeItem("sg_session");
   state.session = null;
   $("screenMain").classList.add("hidden");
   $("screenLogin").classList.remove("hidden");
