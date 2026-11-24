@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="حرس السلامة">
+<meta name="theme-color" content="#16324F">
+<title>حرس السلامة — نظام إدارة السلامة</title>
+<style>
+  :root{
+    --navy:#16324F; --navy2:#1B3A5C; --accent:#1D6FB8; --bg:#EEF1F6; --card:#FFFFFF;
+    --line:#DBE2EC; --ink:#1C2A3A; --mut:#6B7A8D; --danger:#C0392B; --ok:#1E8E5A;
+    --mine:#C9B8E8; --mine-ink:#241A38; --in:#FFFFFF; --rad:16px;
+    --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0; height:100%}
+  body{
+    font-family:-apple-system,"SF Arabic","Segoe UI",Tahoma,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:16px; line-height:1.55;
+    overflow:hidden;
+  }
+  button{font-family:inherit}
+  input,textarea{font-family:inherit; font-size:16px}
+  .hidden{display:none !important}
+
+  /* ======== شاشة الدخول ======== */
+  #screenLogin{
+    min-height:100dvh; display:flex; flex-direction:column; justify-content:center;
+    padding:clamp(16px,5vw,32px); padding-top:calc(var(--sat) + 16px);
+    background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 38%,var(--bg) 38.1%);
+  }
+  .loginCard{
+    background:var(--card); border-radius:20px; padding:clamp(18px,5vw,28px);
+    max-width:460px; width:100%; margin:0 auto; box-shadow:0 10px 30px rgba(22,50,79,.18);
+  }
+  .brand{ text-align:center; padding:clamp(8px,3vw,20px) 0 18px; color:#fff }
+  .brandIcon{ font-size:clamp(34px,9vw,44px); line-height:1 }
+  .brand h1{ margin:6px 0 2px; font-size:clamp(20px,6vw,26px); font-weight:800 }
+  .brand p{ margin:0; color:#C7D4E4; font-size:clamp(13px,3.6vw,15px) }
+  .field{ margin:12px 0 }
+  .field label{ display:block; font-size:13px; color:var(--mut); margin-bottom:6px; font-weight:600 }
+  .field input{
+    width:100%; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px;
+    background:#FAFBFD; outline:none; transition:border .15s;
+  }
+  .field input:focus{ border-color:var(--accent) }
+  #btnLogin{
+    width:100%; margin-top:14px; padding:14px; border:0; border-radius:14px;
+    background:var(--navy); color:#fff; font-size:17px; font-weight:700;
+  }
+  #btnLogin:disabled{ opacity:.55 }
+  #loginError{
+    display:none; margin-top:12px; padding:10px 12px; border-radius:10px;
+    background:#FDEBE8; color:var(--danger); font-size:14px; border:1px solid #F5C6C0;
+    word-break:break-word;
+  }
+  .dbLine{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    margin-top:14px; padding-top:12px; border-top:1px dashed var(--line); font-size:13px; color:var(--mut);
+  }
+  #dbStatus{ display:flex; align-items:center; gap:6px }
+  .dot{ width:9px; height:9px; border-radius:50%; background:var(--ok); display:inline-block }
+  .dot.err{ background:var(--danger) }
+  #btnDbCfg{ background:none; border:0; color:var(--accent); font-size:14px; text-decoration:underline; padding:0 }
+
+  /* ======== الشاشة الرئيسية ======== */
+  #screenMain{ height:100dvh; display:flex; flex-direction:column }
+  .appHeader{
+    background:var(--navy); color:#fff; padding:calc(var(--sat) + 10px) 16px 10px; flex:none;
+  }
+  .appHeader h2{ margin:0; font-size:clamp(18px,5.4vw,22px); font-weight:800 }
+  .appHeader .sub{ color:#B9C8DA; font-size:12.5px; margin-top:2px }
+  #viewHost{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:8px }
+
+  .banner{
+    margin:10px 12px 0; padding:10px 12px; border-radius:12px; font-size:13.5px;
+    background:#FDEBE8; color:var(--danger); border:1px solid #F5C6C0; word-break:break-word;
+    display:none;
+  }
+
+  /* الخريطة */
+  .mapWrap{ margin:12px; background:var(--card); border-radius:var(--rad); border:1px solid var(--line); padding:10px }
+  #floorPlan{ width:100%; height:auto; display:block; border-radius:10px; background:#F6F8FB }
+  .legend{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 12px 0; font-size:12px; color:var(--mut) }
+  .legend b{ color:var(--ink) }
+  #myZone{ margin:10px 12px 0; font-size:14px; color:var(--mut) }
+  #alertBanner{
+    margin:10px 12px 0; padding:12px 14px; border-radius:12px; background:#FDEBE8;
+    border:1px solid #F0B7B0; display:none;
+  }
+  #alertBanner .t{ font-weight:800; color:var(--danger); font-size:14.5px }
+  #alertBanner .b{ font-size:13.5px; margin-top:3px; color:#8A2B21 }
+
+  /* الرسائل */
+  #viewChat{ display:flex; flex-direction:column; height:100% }
+  .chips{ display:flex; gap:8px; overflow-x:auto; padding:12px 12px 4px; scrollbar-width:none }
+  .chips::-webkit-scrollbar{ display:none }
+  .chip{
+    flex:none; padding:8px 16px; border-radius:999px; border:1.5px solid var(--line);
+    background:var(--card); font-size:14px; font-weight:600; color:var(--mut);
+  }
+  .chip.on{ background:var(--navy); border-color:var(--navy); color:#fff }
+  #msgList{ flex:1; overflow-y:auto; padding:10px 12px; display:flex; flex-direction:column; gap:8px }
+  .msg{ max-width:82%; padding:9px 13px; border-radius:14px; font-size:15px; box-shadow:0 1px 2px rgba(0,0,0,.05); word-break:break-word }
+  .msg.in{ align-self:flex-start; background:var(--in); border:1px solid var(--line); border-top-left-radius:4px }
+  .msg.mine{ align-self:flex-end; background:var(--mine); color:var(--mine-ink); border-top-right-radius:4px }
+  .msg .who{ font-size:12px; font-weight:700; color:var(--accent); margin-bottom:2px }
+  .msg .role{ font-size:11px; color:var(--mut); font-weight:600 }
+  .msg .tm{ font-size:11px; opacity:.65; text-align:left; margin-top:2px }
+  .composer{
+    flex:none; display:flex; gap:8px; padding:8px 12px 8px; background:#F7F9FC;
+    border-top:1px solid var(--line);
+  }
+  #etMessage{
+    flex:1; border:1.5px solid var(--line); border-radius:999px; padding:11px 16px;
+    outline:none; background:#fff; min-width:0;
+  }
+  #btnSend{
+    flex:none; width:48px; height:48px; border-radius:50%; border:0; background:var(--navy);
+    color:#fff; font-size:19px; display:grid; place-items:center;
+  }
+  #tvGroupTitle{ font-size:12.5px }
+
+  /* السجل */
+  .stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:12px }
+  .stat{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 8px; text-align:center }
+  .stat .v{ font-size:clamp(18px,5.5vw,22px); font-weight:800; color:var(--navy) }
+  .stat .k{ font-size:11.5px; color:var(--mut); margin-top:2px }
+  .visitCard{ margin:8px 12px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; gap:8px; align-items:center }
+  .visitCard .z{ font-weight:700; font-size:14.5px }
+  .visitCard .t{ font-size:12.5px; color:var(--mut) }
+  .visitCard .d{ font-size:12.5px; color:var(--accent); font-weight:700 }
+  #btnShare{
+    margin:14px 12px 6px; width:calc(100% - 24px); padding:13px; border:0; border-radius:13px;
+    background:var(--accent); color:#fff; font-size:15.5px; font-weight:700;
+  }
+
+  /* حسابي */
+  .profCard{ margin:12px; background:var(--card); border:1px solid var(--line); border-radius:var(--rad); padding:18px; text-align:center }
+  .avatar{
+    width:64px; height:64px; margin:0 auto 10px; border-radius:50%; background:var(--navy);
+    color:#fff; display:grid; place-items:center; font-size:24px; font-weight:800;
+  }
+  .profCard .nm{ font-weight:800; font-size:17px }
+  .profCard .un{ color:var(--mut); font-size:13.5px }
+  .profCard .rl{ margin-top:6px; display:inline-block; padding:4px 12px; border-radius:999px; background:#E8EEF6; color:var(--navy); font-size:12.5px; font-weight:700 }
+  #tvCurrentZone{ margin-top:8px; font-size:13.5px; color:var(--mut) }
+  .acctBtns{ margin:0 12px; display:flex; flex-direction:column; gap:8px }
+  .acctBtns button{ padding:13px; border-radius:13px; border:1.5px solid var(--line); background:var(--card); font-size:15px; font-weight:700; color:var(--ink) }
+  #btnLogout{ color:var(--danger); border-color:#F0C4BE }
+  .note{ margin:14px 12px 6px; font-size:12px; color:var(--mut); background:var(--card); border:1px dashed var(--line); border-radius:12px; padding:10px 12px }
+
+  /* التنقل السفلي */
+  .tabbar{
+    flex:none; display:flex; background:#fff; border-top:1px solid var(--line);
+    padding:6px 4px calc(var(--sab) + 6px);
+  }
+  .tab{
+    flex:1; background:none; border:0; display:flex; flex-direction:column; align-items:center;
+    gap:2px; padding:6px 0; color:var(--mut); font-size:11.5px; font-weight:600;
+  }
+  .tab .ic{ font-size:20px; line-height:1 }
+  .tab.on{ color:var(--navy) }
+  .tab.on .pill{ background:#E4E9F2 }
+
+  /* حوار عام */
+  dialog{
+    border:0; border-radius:16px; padding:0; width:min(92vw,420px); box-shadow:0 18px 50px rgba(0,0,0,.25);
+  }
+  dialog::backdrop{ background:rgba(12,24,38,.55) }
+  .dlgBody{ padding:18px }
+  .dlgBody h3{ margin:0 0 6px; font-size:17px }
+  .dlgBody p{ margin:0 0 10px; font-size:14px; color:var(--mut); white-space:pre-line }
+  .dlgActions{ display:flex; gap:8px; justify-content:flex-start; padding:0 18px 18px }
+  .dlgActions button{ flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:var(--card); font-weight:700; font-size:14.5px }
+  .dlgActions .primary{ background:var(--navy); color:#fff; border-color:var(--navy) }
+  .dlgErr{ display:none; margin:0 18px 12px; padding:9px 12px; border-radius:10px; background:#FDEBE8; color:var(--danger); font-size:13px; word-break:break-word }
+
+  /* توست */
+  #toast{
+    position:fixed; inset-inline:12px; bottom:calc(var(--sab) + 76px); z-index:60;
+    background:#243B55; color:#fff; border-radius:12px; padding:11px 14px; font-size:13.5px;
+    display:none; box-shadow:0 8px 24px rgba(0,0,0,.3); word-break:break-word;
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== الدخول ==================== -->
+<section id="screenLogin">
+  <div class="brand">
+    <div class="brandIcon">🛡️</div>
+    <h1>حرس السلامة</h1>
+    <p>نظام إدارة السلامة — نسخة الآيفون</p>
+  </div>
+  <div class="loginCard">
+    <div class="field">
+      <label>اسم المستخدم</label>
+      <input id="etUsername" type="text" autocomplete="username" autocapitalize="none" enterkeyhint="next">
+    </div>
+    <div class="field">
+      <label>كلمة المرور</label>
+      <input id="etPassword" type="password" autocomplete="current-password" enterkeyhint="go">
+    </div>
+    <div id="loginError"></div>
+    <button id="btnLogin">تسجيل الدخول</button>
+    <div class="dbLine">
+      <span id="dbStatus"><span class="dot" id="dbDot"></span> قاعدة البيانات: <b id="dbState">جاهزة</b></span>
+      <button id="btnDbCfg" type="button">تعديل الرابط</button>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== الرئيسية ==================== -->
+<section id="screenMain" class="hidden">
+  <div class="appHeader">
+    <h2 id="headerTitle">الخريطة</h2>
+    <div class="sub" id="headerSub">مباشر</div>
+  </div>
+
+  <div id="viewHost">
+
+    <!-- الخريطة -->
+    <div id="viewMap">
+      <div id="alertBanner"><div class="t" id="alertT"></div><div class="b" id="alertB"></div></div>
+      <div id="myZone"></div>
+      <div class="mapWrap"><svg id="floorPlan" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid meet" role="img" aria-label="مخطط المناطق"></svg></div>
+      <div class="legend">
+        <span><b>العدد داخل كل منطقة</b> = أعضاء متواجدون الآن</span>
+      </div>
+    </div>
+
+    <!-- الرسائل -->
+    <div id="viewChat" class="hidden">
+      <div class="chips" id="chipGroups"></div>
+      <div id="msgList"></div>
+      <div class="composer">
+        <input id="etMessage" type="text" placeholder="اكتب رسالة إلى المجموعة..." enterkeyhint="send">
+        <button id="btnSend" aria-label="إرسال">➤</button>
+      </div>
+    </div>
+
+    <!-- السجل -->
+    <div id="viewLog" class="hidden">
+      <div class="stats">
+        <div class="stat"><div class="v" id="tvTotalTime">—</div><div class="k">زمن التواجد اليوم</div></div>
+        <div class="stat"><div class="v" id="tvZones">—</div><div class="k">مناطق مُزارَة</div></div>
+        <div class="stat"><div class="v" id="tvAlerts">—</div><div class="k">تنبيهات اليوم</div></div>
+      </div>
+      <div id="visitList"></div>
+      <button id="btnShare">📤 مشاركة ملخص اليوم</button>
+    </div>
+
+    <!-- حسابي -->
+    <div id="viewAccount" class="hidden">
+      <div class="profCard">
+        <div class="avatar" id="tvAvatar">IN</div>
+        <div class="nm" id="tvFullName"></div>
+        <div class="un" id="tvUsername"></div>
+        <div class="rl" id="tvRole"></div>
+        <div id="tvCurrentZone">جارٍ التحديث...</div>
+      </div>
+      <div class="acctBtns">
+        <button id="btnChangePassword">🔑 تغيير كلمة المرور</button>
+        <button id="btnRefresh">↻ تحديث البيانات الآن</button>
+        <button id="btnLogout">🚪 تسجيل الخروج</button>
+      </div>
+      <div class="note">
+        موقعك المباشر يُحدَّث من أجهزة أندرويد العاملة في الميدان (منارات BLE).
+        نسخة الآيفون تعرض كل شيء لحظيًا وتتيح الرسائل والتقارير، لكنها لا تُرسل نبضات موقع.
+      </div>
+    </div>
+  </div>
+
+  <div class="banner" id="globalError"></div>
+
+  <nav class="tabbar">
+    <button class="tab on" data-view="map"><span class="ic pill">🗺️</span>الخريطة</button>
+    <button class="tab" data-view="chat"><span class="ic pill">💬</span>الرسائل</button>
+    <button class="tab" data-view="log"><span class="ic pill">📋</span>السجل</button>
+    <button class="tab" data-view="account"><span class="ic pill">👤</span>حسابي</button>
+  </nav>
+</section>
+
+<!-- حوار التنبيه النشط -->
+<dialog id="dlgAlert">
+  <div class="dlgBody"><h3>⚠️ تنبيه تجمّع</h3><p id="dlgAlertMsg"></p></div>
+  <div class="dlgActions"><button class="primary" onclick="dlgAlert.close()">فهمت</button></div>
+</dialog>
+
+<!-- حوار تغيير كلمة المرور -->
+<dialog id="dlgPass">
+  <div class="dlgBody"><h3>تغيير كلمة المرور</h3></div>
+  <div class="dlgBody" style="padding-top:0">
+    <div class="field"><label>كلمة المرور الحالية</label><input id="etCurPass" type="password"></div>
+    <div class="field"><label>كلمة المرور الجديدة (6 أحرف على الأقل)</label><input id="etNewPass" type="password"></div>
+  </div>
+  <div class="dlgErr" id="passErr"></div>
+  <div class="dlgActions">
+    <button id="btnSavePass" class="primary">حفظ</button>
+    <button onclick="dlgPass.close()">إلغاء</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+"use strict";
+// ============================================================
+// حرس السلامة — نسخة الآيفون (PWA)
+// اتصال مباشر بقاعدة PostgreSQL (Neon) عبر بروكسي HTTPS الرسمي
+// نفس استعلامات نسخة أندرويد (Repo) ونفس صيغة كلمات المرور.
+// ============================================================
+
+const DEFAULT_CONN =
+  "postgresql://neondb_owner:npg_mnhEgySIK70U" +
+  "@ep-icy-meadow-b94xpv9n-pooler.c-7.eu-central-1.aws.neon.tech/neondb?sslmode=require";
+
+const $ = id => document.getElementById(id);
+const dlgAlert = $("dlgAlert"), dlgPass = $("dlgPass");
+
+// ---------- الحالة ----------
+const state = {
+  conn: localStorage.getItem("sg_conn") || DEFAULT_CONN,
+  session: JSON.parse(localStorage.getItem("sg_session") || "null"),
+  view: "map",
+  groups: [], currentGroupId: 0, messages: [], lastMsgId: 0,
+  zones: [], roster: [], activeAlert: null, summary: null,
+  timers: [],
+};
+
+// ---------- البنية التحتية للبيانات ----------
+function parseConn(conn) {
+  let u = conn.trim().replace(/^jdbc:/, "");
+  const m = u.match(/^postgres(?:ql)?:\/\/([^@]+)@([^/?]+)(\/[^?]*)?(\?.*)?$/);
+  if (!m) throw new Error("رابط قاعدة البيانات غير صالح");
+  const [creds, hostDb] = [m[1], m[2]];
+  const cIdx = creds.indexOf(":");
+  const user = decodeURIComponent(cIdx === -1 ? creds : creds.slice(0, cIdx));
+  const pass = cIdx === -1 ? "" : decodeURIComponent(creds.slice(cIdx + 1));
+  let path = m[3] || "/neondb";
+  let query = m[4] || "";
+  if (!/sslmode=/.test(query)) query += (query ? "&" : "?") + "sslmode=require";
+  const fullHost = hostDb.includes("/") ? hostDb : hostDb; // host/db اسم القاعدة ضمن المسار
+  const host = fullHost.split("/")[0];
+  // المضيف المحلي عبر http (للاختبار المحلي وتطوير الواجهة فقط) — الباقي https دائمًا
+  const hostNoPort = host.replace(/:\d+$/, "");
+  const scheme = (hostNoPort === "127.0.0.1" || hostNoPort === "localhost") ? "http" : "https";
+  return { base: scheme + "://" + host, connString: `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(pass)}@${hostDb}${path}${query}` };
+}
+
+/** استعلام — نفس بروتوكول بروكسي Neon الرسمي (يستجيب CORS مفتوحًا). */
+async function pg(sql, params = []) {
+  const { base, connString } = parseConn(state.conn);
+  let r;
+  try {
+    r = await fetch(base + "/sql", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Neon-Connection-String": connString },
+      body: JSON.stringify({ query: sql, params }),
+    });
+  } catch (e) {
+    throw new Error("لا يمكن الوصول إلى خادم قاعدة البيانات — تحقق من اتصال الإنترنت");
+  }
+  if (r.status === 401 || r.status === 403) throw new Error("بيانات الدخول داخل رابط قاعدة البيانات غير صحيحة — عدّل الرابط");
+  if (!r.ok) throw new Error("تعذر الاتصال بقاعدة البيانات (HTTP " + r.status + ")");
+  const j = await r.json();
+  return j.rowAsArray
+    ? j.rows.map(arr => Object.fromEntries(j.fields.map((f, i) => [f.name, arr[i]])))
+    : j.rows;
+}
+
+// ---------- كلمات المرور: صيغة ASP.NET Identity v3 (نفس أندرويد) ----------
+const beInt = (b, o) => ((b[o] << 24) | (b[o+1] << 16) | (b[o+2] << 8) | b[o+3]) >>> 0;
+function b64ToBytes(s) {
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  s += "=".repeat((4 - s.length % 4) % 4);
+  const bin = atob(s);
+  return Uint8Array.from(bin, ch => ch.charCodeAt(0));
+}
+async function verifyPassword(password, encoded) {
+  try {
+    const raw = b64ToBytes(encoded);
+    if (raw.length < 1 || raw[0] !== 1) return false;
+    const prf = beInt(raw, 1), iter = beInt(raw, 5), saltLen = beInt(raw, 9);
+    if (iter < 1 || iter > 5000000 || saltLen < 8 || saltLen > 64) return false;
+    if (raw.length < 13 + saltLen + 16) return false;
+    const salt = raw.slice(13, 13 + saltLen), subkey = raw.slice(13 + saltLen);
+    const alg = prf === 0 ? "SHA-1" : prf === 1 ? "SHA-256" : prf === 2 ? "SHA-512" : null;
+    if (!alg) return false;
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    const dk = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: alg, salt, iterations: iter }, key, subkey.length * 8));
+    let diff = dk.length ^ subkey.length;
+    for (let i = 0; i < Math.min(dk.length, subkey.length); i++) diff |= dk[i] ^ subkey[i];
+    return diff === 0;
+  } catch { return false; }
+}
+async function makeHash(password, iterations = 10000) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const dk = new Uint8Array(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-1", salt, iterations }, key, 256));
+  const out = new Uint8Array(29 + dk.length), dv = new DataView(out.buffer);
+  out[0] = 1; dv.setUint32(1, 0); dv.setUint32(5, iterations); dv.setUint32(9, 16);
+  out.set(salt, 13); out.set(dk, 29);
+  let s = ""; for (const b of out) s += String.fromCharCode(b);
+  return btoa(s);
+}
+
+// ---------- واجهة عامة ----------
+let toastTimer = null;
+function toast(msg) {
+  if (!msg) return;
+  $("toast").textContent = msg;
+  $("toast").style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $("toast").style.display = "none"; }, 4500);
+}
+function globalError(msg) {
+  const el = $("globalError");
+  if (!msg) { el.style.display = "none"; return; }
+  el.textContent = "⚠ " + msg;
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 6000);
+}
+const fmtTime = s => {
+  try {
+    const d = new Date(s);
+    if (isNaN(d)) return "";
+    return d.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", hour12: false });
+  } catch { return ""; }
+};
+const roleName = r => r === "admin" ? "أدمن — مدير السلامة" : r === "supervisor" ? "مشرف ميداني" : "عضو فريق السلامة";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+// ============================================================
+// الدخول
+// ============================================================
+$("btnDbCfg").addEventListener("click", () => {
+  const cur = prompt("رابط قاعدة البيانات (postgresql://...):", state.conn);
+  if (cur && cur.trim()) { state.conn = cur.trim(); localStorage.setItem("sg_conn", state.conn); checkConn(); }
+});
+async function checkConn() {
+  $("dbDot").classList.remove("err"); $("dbState").textContent = "جاهزة";
+  try { await pg("SELECT 1 AS ok"); }
+  catch (e) { $("dbDot").classList.add("err"); $("dbState").textContent = "غير متصلة"; }
+}
+checkConn();
+
+$("etPassword").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+$("btnLogin").addEventListener("click", doLogin);
+
+async function doLogin() {
+  const username = $("etUsername").value.trim(), password = $("etPassword").value;
+  const errEl = $("loginError");
+  errEl.style.display = "none";
+  if (!username || !password) { errEl.textContent = "أدخل اسم المستخدم وكلمة المرور."; errEl.style.display = "block"; return; }
+  const btn = $("btnLogin");
+  btn.disabled = true; btn.textContent = "جارٍ التحقق...";
+  try {
+    const rows = await pg("SELECT * FROM users WHERE username = $1", [username.toLowerCase()]);
+    const u = rows[0];
+    if (!u || u.is_active === false) throw new Error("اسم المستخدم أو كلمة المرور غير صحيحة، أو الحساب موقوف.");
+    if (!(await verifyPassword(password, u.password_hash || ""))) throw new Error("اسم المستخدم أو كلمة المرور غير صحيحة.");
+    await pg("UPDATE users SET last_seen_at = now() WHERE id = $1", [u.id]);
+    state.session = {
+      userId: u.id, username: u.username, fullName: u.full_name || "",
+      role: u.role || "member", assignedZoneId: u.assigned_zone_id ?? null,
+    };
+    localStorage.setItem("sg_session", JSON.stringify(state.session));
+    enterMain();
+  } catch (e) {
+    errEl.textContent = e.message || "تعذر الاتصال بقاعدة البيانات — تحقق من الرابط والشبكة";
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "تسجيل الدخول";
+  }
+}
+
+// ============================================================
+// الشاشة الرئيسية + التبويبات
+// ============================================================
+const viewTitles = { map: "الخريطة", chat: "الرسائل", log: "السجل", account: "حسابي" };
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
+function switchView(v) {
+  state.view = v;
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.view === v));
+  $("headerTitle").textContent = viewTitles[v];
+  $("headerSub").textContent = v === "map" ? "مباشر" : "";
+  for (const id of ["map", "chat", "log", "account"]) $("view" + id[0].toUpperCase() + id.slice(1)).classList.toggle("hidden", id !== v);
+  globalError("");
+  if (v === "map") refreshMap();
+  if (v === "chat") { loadGroups(); loadCurrentMessages(); }
+  if (v === "log") loadSummary();
+  if (v === "account") loadMe();
+}
+
+function enterMain() {
+  $("screenLogin").classList.add("hidden");
+  $("screenMain").classList.remove("hidden");
+  startTimers();
+  switchView("map");
+}
+
+$("btnLogout").addEventListener("click", () => {
+  stopTimers();
+  localStorage.removeItem("sg_session");
+  state.session = null;
+  $("screenMain").classList.add("hidden");
+  $("screenLogin").classList.remove("hidden");
+  $("etPassword").value = "";
+});
+
+// ============================================================
+// الخريطة
+// ============================================================
+async function refreshMap() {
+  if (!state.session) return;
+  try {
+    const [zones, roster, alerts] = await Promise.all([
+      pg("SELECT * FROM zones WHERE is_active ORDER BY id"),
+      pg("SELECT id, full_name, role FROM users WHERE is_active ORDER BY id"),
+      pg("SELECT * FROM gathering_alerts WHERE status = 'active' ORDER BY created_at DESC LIMIT 5"),
+    ]);
+    const timeoutMin = 12;
+    const onlineRows = await pg(
+      `SELECT DISTINCT ON (p.user_id) p.user_id, p.zone_id
+       FROM presence_pings p
+       WHERE p.recorded_at >= now() - make_interval(mins => $1)
+       ORDER BY p.user_id, p.recorded_at DESC`, [timeoutMin]);
+    const online = new Map(onlineRows.map(r => [r.user_id, r.zone_id]));
+    const occupants = {};
+    for (const z of online.values()) if (z != null) occupants[z] = (occupants[z] || 0) + 1;
+
+    state.zones = zones;
+    state.roster = roster.map(u => ({ ...u, online: online.has(u.id), zoneId: online.get(u.id) ?? null }));
+    state.activeAlert = alerts[0] || null;
+    renderMap(occupants);
+    globalError("");
+  } catch (e) {
+    globalError(e.message);
+  }
+}
+
+function renderMap(occupants) {
+  // مخطط SVG — مستطيلات المناطق بإحداثيات القاعدة نفسها (map_x/map_y/width/height)
+  const svg = $("floorPlan");
+  let maxX = 1000, maxY = 700;
+  for (const z of state.zones) {
+    maxX = Math.max(maxX, (z.map_x || 0) + (z.map_width || 120) + 40);
+    maxY = Math.max(maxY, (z.map_y || 0) + (z.map_height || 120) + 40);
+  }
+  svg.setAttribute("viewBox", `0 0 ${maxX} ${maxY}`);
+  const parts = [];
+  for (const z of state.zones) {
+    const n = occupants[z.id] || 0;
+    const alertHere = state.activeAlert && state.activeAlert.zone_id === z.id;
+    const stroke = alertHere ? "#C0392B" : "#9FB0C4";
+    const width = Math.max(2.5, (maxX / 1000) * 3);
+    parts.push(`<g>
+      <rect x="${z.map_x || 0}" y="${z.map_y || 0}" width="${z.map_width || 120}" height="${z.map_height || 120}"
+        rx="10" fill="${esc(z.color || "#1D6FB8")}" fill-opacity="${n ? 0.85 : 0.35}"
+        stroke="${stroke}" stroke-width="${alertHere ? width * 1.6 : width}"/>
+      <text x="${(z.map_x || 0) + (z.map_width || 120) / 2}" y="${(z.map_y || 0) + (z.map_height || 120) / 2 - 6}"
+        text-anchor="middle" font-size="${Math.max(13, maxX / 42)}" font-weight="700"
+        fill="${n ? "#fff" : "#3E4E63"}">${esc(z.name)}</text>
+      <text x="${(z.map_x || 0) + (z.map_width || 120) / 2}" y="${(z.map_y || 0) + (z.map_height || 120) / 2 + Math.max(15, maxX / 30)}"
+        text-anchor="middle" font-size="${Math.max(12, maxX / 50)}" fill="${n ? "#EAF2FB" : "#5B6C82"}">👥 ${n}</text>
+    </g>`);
+  }
+  svg.innerHTML = parts.join("") || `<text x="500" y="350" text-anchor="middle" font-size="24" fill="#6B7A8D">لا توجد مناطق مُعدّة بعد</text>`;
+
+  const me = state.roster.find(u => u.id === state.session.userId);
+  const mz = state.session.assignedZoneId != null
+    ? state.zones.find(z => z.id === state.session.assignedZoneId)?.name : null;
+  $("myZone").textContent = me?.zoneId != null
+    ? `موقعك الآن: ${state.zones.find(z => z.id === me.zoneId)?.name || ""}`
+    : mz ? `منطقتك المعيّنة: ${mz}` : "";
+
+  const ab = $("alertBanner");
+  if (state.activeAlert) {
+    const zName = state.zones.find(z => z.id === state.activeAlert.zone_id)?.name || "";
+    $("alertT").textContent = `● تنبيه تجمّع — ${zName}`;
+    $("alertB").textContent = `${state.activeAlert.member_count || 0} أعضاء داخل المنطقة منذ بداية التنبيه — يرجى التوزيع وإبلاغ المشرف.`;
+    ab.style.display = "block";
+  } else ab.style.display = "none";
+}
+
+// ============================================================
+// الرسائل
+// ============================================================
+async function loadGroups() {
+  if (!state.session) return;
+  try {
+    const all = await pg("SELECT * FROM groups ORDER BY type, id");
+    const privileged = state.session.role === "admin" || state.session.role === "supervisor";
+    let visible = all;
+    if (!privileged) {
+      const mem = await pg("SELECT group_id FROM group_members WHERE user_id = $1", [state.session.userId]);
+      const ids = new Set(mem.map(r => r.group_id));
+      visible = all.filter(g =>
+        (g.type === "team" && ids.has(g.id)) || (g.zone_id != null && g.zone_id === state.session.assignedZoneId));
+    }
+    state.groups = visible;
+    renderChips();
+    if (visible.length && !state.currentGroupId) selectGroup(visible[0].id);
+    if (!visible.length) $("msgList").innerHTML =
+      `<div style="text-align:center;color:var(--mut);padding:30px 16px;font-size:14px">لا توجد مجموعات متاحة لحسابك بعد</div>`;
+    globalError("");
+  } catch (e) {
+    globalError("تعذّر تحميل المجموعات — " + e.message);
+  }
+}
+function renderChips() {
+  $("chipGroups").innerHTML = state.groups.map(g =>
+    `<button class="chip ${g.id === state.currentGroupId ? "on" : ""}" data-gid="${g.id}">${esc(g.name)}</button>`).join("");
+  $("chipGroups").querySelectorAll(".chip").forEach(ch =>
+    ch.addEventListener("click", () => selectGroup(+ch.dataset.gid)));
+}
+async function selectGroup(gid) {
+  state.currentGroupId = gid;
+  renderChips();
+  const g = state.groups.find(x => x.id === gid);
+  $("tvGroupTitle").textContent = "";
+  $("headerTitle").textContent = "الرسائل" + (g ? " — " + g.name : "");
+  await loadCurrentMessages(true);
+}
+async function loadCurrentMessages(reset) {
+  if (!state.session || !state.currentGroupId) return;
+  try {
+    const after = reset ? 0 : state.lastMsgId;
+    const rows = await pg(
+      "SELECT * FROM messages WHERE group_id = $1 AND id > $2 ORDER BY id LIMIT 200",
+      [state.currentGroupId, after]);
+    if (rows.length) {
+      const senderIds = [...new Set(rows.map(r => r.sender_id).filter(v => v != null))];
+      let senders = {};
+      if (senderIds.length) {
+        const ph = senderIds.map((_, i) => `$${i + 1}`).join(",");
+        const sr = await pg(`SELECT id, full_name, role FROM users WHERE id IN (${ph})`, senderIds);
+        senders = Object.fromEntries(sr.map(s => [s.id, s]));
+      }
+      if (reset) state.messages = [];
+      for (const m of rows) {
+        if (state.messages.some(x => x.id === m.id)) continue;
+        const s = senders[m.sender_id];
+        state.messages.push({
+          id: m.id, senderId: m.sender_id, body: m.body || "",
+          senderName: s?.full_name, senderRole: s?.role,
+          isAlert: m.is_alert === true, createdAt: m.created_at,
+        });
+        state.lastMsgId = Math.max(state.lastMsgId, m.id);
+      }
+      renderMessages();
+    }
+    // تعليم كمقروء
+    if (reset) {
+      const unread = await pg(
+        `SELECT m.id FROM messages m
+         WHERE m.group_id = $1 AND m.created_at >= now() - interval '7 days'
+           AND NOT EXISTS (SELECT 1 FROM message_reads r WHERE r.message_id = m.id AND r.user_id = $2)
+         LIMIT 100`, [state.currentGroupId, state.session.userId]);
+      for (const m of unread)
+        await pg("INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING", [m.id, state.session.userId]);
+    }
+    globalError("");
+  } catch (e) {
+    globalError("تعذّر تحميل الرسائل — " + e.message);
+  }
+}
+function renderMessages() {
+  const mine = state.session.userId;
+  $("msgList").innerHTML = state.messages.map(m => {
+    const isMine = m.senderId === mine;
+    const role = m.senderRole === "admin" ? "أدمن" : m.senderRole === "supervisor" ? "مشرف" : "";
+    return `<div class="msg ${isMine ? "mine" : "in"}">
+      ${!isMine ? `<div class="who">${esc(m.senderName || "النظام")} ${role ? `<span class="role">· ${role}</span>` : ""}</div>` : ""}
+      <div>${esc(m.body)}</div>
+      <div class="tm">${fmtTime(m.createdAt)}</div>
+    </div>`;
+  }).join("") || `<div style="text-align:center;color:var(--mut);padding:30px 16px;font-size:14px">لا رسائل بعد — ابدأ المحادثة</div>`;
+  const host = $("msgList");
+  requestAnimationFrame(() => { host.scrollTop = host.scrollHeight; });
+}
+$("btnSend").addEventListener("click", sendMsg);
+$("etMessage").addEventListener("keydown", e => { if (e.key === "Enter") sendMsg(); });
+async function sendMsg() {
+  const text = $("etMessage").value.trim();
+  if (!text) return;
+  if (!state.currentGroupId) { toast("اختَر مجموعة أولًا"); return; }
+  $("etMessage").value = "";
+  try {
+    const g = state.groups.find(x => x.id === state.currentGroupId);
+    const privileged = state.session.role === "admin" || state.session.role === "supervisor";
+    if (!privileged && g) {
+      const mem = await pg("SELECT 1 AS ok FROM group_members WHERE group_id = $1 AND user_id = $2",
+        [state.currentGroupId, state.session.userId]);
+      if (!mem.length && g.zone_id !== state.session.assignedZoneId)
+        throw new Error("لا يمكنك الإرسال إلى هذه المجموعة.");
+    }
+    const rows = await pg(
+      `INSERT INTO messages (group_id, sender_id, body)
+       VALUES ($1, $2, $3) RETURNING id, group_id, sender_id, body, is_alert, created_at`,
+      [state.currentGroupId, state.session.userId, text]);
+    const m = rows[0];
+    if (m) {
+      if (state.messages.some(x => x.id === m.id)) return;
+      state.messages.push({
+        id: m.id, senderId: m.sender_id, body: m.body, senderName: state.session.fullName,
+        senderRole: state.session.role, isAlert: m.is_alert === true, createdAt: m.created_at,
+      });
+      state.lastMsgId = Math.max(state.lastMsgId, m.id);
+      renderMessages();
+    }
+    globalError("");
+  } catch (e) {
+    globalError("تعذّر الإرسال — " + e.message);
+    $("etMessage").value = text; // إرجاع النص كي لا يُفقد
+  }
+}
+
+// ============================================================
+// السجل
+// ============================================================
+async function loadSummary() {
+  if (!state.session) return;
+  try {
+    const visits = await pg(
+      `SELECT v.zone_id, v.entered_at, v.exited_at, v.duration_seconds, z.name AS zone_name
+       FROM zone_visits v LEFT JOIN zones z ON z.id = v.zone_id
+       WHERE v.user_id = $1 AND v.entered_at >= date_trunc('day', now())
+       ORDER BY v.entered_at DESC`, [state.session.userId]);
+    let alertsToday = 0;
+    if (state.session.assignedZoneId != null) {
+      const c = await pg(
+        "SELECT count(*) AS n FROM gathering_alerts WHERE created_at >= date_trunc('day', now()) AND zone_id = $1",
+        [state.session.assignedZoneId]);
+      alertsToday = Number(c[0]?.n || 0);
+    }
+    const totalSec = visits.reduce((acc, v) => acc + Number(v.duration_seconds || 0), 0);
+    state.summary = { totalSec, zonesVisited: new Set(visits.map(v => v.zone_id).filter(v => v != null)).size, alertsToday, visits };
+    renderSummary();
+    globalError("");
+  } catch (e) {
+    globalError("تعذّر تحميل السجل — " + e.message);
+  }
+}
+function renderSummary() {
+  const s = state.summary;
+  if (!s) return;
+  const h = Math.floor(s.totalSec / 3600), mn = Math.floor((s.totalSec % 3600) / 60);
+  $("tvTotalTime").textContent = `${h}س ${mn}د`;
+  $("tvZones").textContent = s.zonesVisited;
+  $("tvAlerts").textContent = s.alertsToday;
+  $("visitList").innerHTML = s.visits.map(v => {
+    const dur = v.duration_seconds != null
+      ? (v.duration_seconds < 60 ? `مدة: ${v.duration_seconds} ث` : `مدة: ${Math.floor(v.duration_seconds / 60)} د`) : "";
+    return `<div class="visitCard">
+      <div><div class="z">${esc(v.zone_name || "خارج التغطية")}</div>
+      <div class="t">${fmtTime(v.entered_at)} ← ${v.exited_at ? fmtTime(v.exited_at) : "الآن"}</div></div>
+      <div class="d">${dur}</div>
+    </div>`;
+  }).join("") || `<div style="text-align:center;color:var(--mut);padding:18px;font-size:14px">لا زيارات مسجّلة اليوم</div>`;
+}
+$("btnShare").addEventListener("click", () => {
+  const s = state.summary;
+  if (!s) { toast("لا بيانات للمشاركة بعد"); return; }
+  const h = Math.floor(s.totalSec / 3600), mn = Math.floor((s.totalSec % 3600) / 60);
+  let text = `ملخص دورية السلامة — ${state.session.fullName}\nالمناطق المزارة: ${s.zonesVisited} — التنبيهات: ${s.alertsToday}\nزمن التواجد: ${h}س ${mn}د`;
+  for (const v of s.visits)
+    text += `\n• ${v.zone_name || "خارج التغطية"}: ${fmtTime(v.entered_at)} ← ${v.exited_at ? fmtTime(v.exited_at) : "الآن"} (${v.duration_seconds || 0} ث)`;
+  if (navigator.share) navigator.share({ title: "ملخص دورية السلامة", text }).catch(() => {});
+  else { navigator.clipboard.writeText(text); toast("تم نسخ الملخص للحافظة"); }
+});
+
+// ============================================================
+// حسابي
+// ============================================================
+async function loadMe() {
+  const s = state.session;
+  $("tvFullName").textContent = s.fullName || s.username;
+  $("tvUsername").textContent = "@" + s.username;
+  $("tvRole").textContent = roleName(s.role);
+  $("tvAvatar").textContent = (s.fullName || "IN").trim().slice(0, 2) || "IN";
+  $("tvCurrentZone").textContent = "جارٍ التحديث...";
+  try {
+    const onlineRows = await pg(
+      `SELECT DISTINCT ON (p.user_id) p.user_id, p.zone_id
+       FROM presence_pings p
+       WHERE p.recorded_at >= now() - make_interval(mins => $1)
+       ORDER BY p.user_id, p.recorded_at DESC`, [12]);
+    const mine = onlineRows.find(r => r.user_id === s.userId);
+    if (mine && mine.zone_id != null) {
+      const z = await pg("SELECT name FROM zones WHERE id = $1", [mine.zone_id]);
+      $("tvCurrentZone").textContent = "موقعك الآن: " + (z[0]?.name || "");
+    } else $("tvCurrentZone").textContent = "خارج التغطية حاليًا";
+    globalError("");
+  } catch (e) {
+    $("tvCurrentZone").textContent = "—";
+    globalError(e.message);
+  }
+}
+$("btnChangePassword").addEventListener("click", () => {
+  $("etCurPass").value = ""; $("etNewPass").value = "";
+  $("passErr").style.display = "none";
+  dlgPass.showModal();
+});
+$("btnSavePass").addEventListener("click", async () => {
+  const cur = $("etCurPass").value, nw = $("etNewPass").value;
+  const errEl = $("passErr");
+  errEl.style.display = "none";
+  if (nw.length < 6) { errEl.textContent = "كلمة المرور قصيرة (6 أحرف على الأقل)."; errEl.style.display = "block"; return; }
+  const btn = $("btnSavePass");
+  btn.disabled = true;
+  try {
+    const rows = await pg("SELECT password_hash FROM users WHERE id = $1", [state.session.userId]);
+    if (!rows.length || !(await verifyPassword(cur, rows[0].password_hash || "")))
+      throw new Error("كلمة المرور الحالية غير صحيحة.");
+    await pg("UPDATE users SET password_hash = $1 WHERE id = $2", [await makeHash(nw), state.session.userId]);
+    dlgPass.close();
+    toast("تم تغيير كلمة المرور");
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = "block";
+  } finally { btn.disabled = false; }
+});
+$("btnRefresh").addEventListener("click", () => { refreshMap(); toast("تم تحديث البيانات"); });
+
+// ============================================================
+// الاستقصاء الدوري (بديل SignalR)
+// ============================================================
+function startTimers() {
+  stopTimers();
+  state.timers.push(setInterval(() => {
+    if (document.hidden || !state.session) return;
+    if (state.view === "chat" && state.currentGroupId) loadCurrentMessages(false);
+  }, 5000));
+  state.timers.push(setInterval(() => {
+    if (document.hidden || !state.session) return;
+    if (state.view === "map") refreshMap();
+  }, 12000));
+}
+function stopTimers() {
+  state.timers.forEach(clearInterval);
+  state.timers = [];
+}
+
+// ---------- الإقلاع ----------
+if (state.session) enterMain();
+</script>
+</body>
+</html>
